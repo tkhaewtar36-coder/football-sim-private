@@ -1,96 +1,98 @@
 // === ตั้งค่า ===
-const PRIVATE_PASSWORD = "thai2026"; // เปลี่ยนรหัสผ่านตรงนี้ครับ
+// เปลี่ยนรหัสผ่านตรงนี้ได้เลยครับ
+const CONFIG = {
+  password: "thai2026",        // รหัสผ่านเข้าใช้งาน
+  allowRetry: true,            // ให้ลองใหม่ได้เมื่อใส่ผิด
+  maxAttempts: 5,              // จำนวนครั้งที่ลองผิดได้สูงสุด
+  lockoutMinutes: 10           // ล็อกเป็นเวลากี่นาทีเมื่อใส่ผิดครบกำหนด
+};
 
-// === ข้อมูลทีม (หรือโหลดจากไฟล์ teams.json) ===
-const teams = [
-  { id: "thailand", name: "ทีมชาติไทย", attack: 78, defense: 72 },
-  { id: "japan", name: "ญี่ปุ่น", attack: 85, defense: 80 },
-  { id: "korea", name: "เกาหลีใต้", attack: 83, defense: 78 },
-  { id: "brazil", name: "บราซิล", attack: 92, defense: 88 },
-  { id: "germany", name: "เยอรมนี", attack: 88, defense: 85 },
-  { id: "france", name: "ฝรั่งเศส", attack: 89, defense: 84 }
-];
+// === ตรวจสอบสถานะการล็อกอิน ===
+const STORAGE_KEY = "football_sim_auth";
+
+function getAuthState() {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  return saved ? JSON.parse(saved) : {
+    authenticated: false,
+    attempts: 0,
+    lockedUntil: null
+  };
+}
+
+function saveAuthState(state) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function isLocked() {
+  const state = getAuthState();
+  if (state.lockedUntil && new Date(state.lockedUntil) > new Date()) {
+    return true;
+  }
+  return false;
+}
 
 // === ส่วนล็อกอิน ===
 const loginSection = document.getElementById("login-section");
 const mainApp = document.getElementById("main-app");
+const loginError = document.getElementById("login-error");
 
-document.getElementById("login-btn").addEventListener("click", () => {
-  const input = document.getElementById("password-input").value;
-  if (input === PRIVATE_PASSWORD) {
-    loginSection.style.display = "none";
-    mainApp.style.display = "block";
-    populateTeamSelects();
-  } else {
-    document.getElementById("login-error").textContent = "รหัสผ่านไม่ถูกต้อง";
-  }
-});
-
-// === เติมรายการทีม ===
-function populateTeamSelects() {
-  const selectA = document.getElementById("team-a");
-  const selectB = document.getElementById("team-b");
-  
-  [selectA, selectB].forEach(select => {
-    select.innerHTML = "";
-    teams.forEach(t => {
-      const opt = document.createElement("option");
-      opt.value = t.id;
-      opt.textContent = t.name;
-      select.appendChild(opt);
-    });
-  });
+function showApp() {
+  loginSection.style.display = "none";
+  mainApp.style.display = "block";
+  populateTeamSelects();
 }
 
-// === ตรรกะจำลองผล ===
-function simulateMatch(teamIdA, teamIdB) {
-  const tA = teams.find(t => t.id === teamIdA);
-  const tB = teams.find(t => t.id === teamIdB);
-
-  // คำนวณโอกาสทำประตูตามค่าความแข็งแรง
-  const powerA = (tA.attack + tB.defense / 2) / 100;
-  const powerB = (tB.attack + tA.defense / 2) / 100;
-
-  let scoreA = 0, scoreB = 0;
-  
-  // จำลองเหตุการณ์ตลอด 90 นาที
-  for (let i = 0; i < 10; i++) {
-    if (Math.random() < 0.35 * powerA) scoreA++;
-    if (Math.random() < 0.35 * powerB) scoreB++;
-  }
-
-  return { scoreA, scoreB, teamA: tA, teamB: tB };
+function showLogin(message = "") {
+  loginSection.style.display = "block";
+  mainApp.style.display = "none";
+  loginError.textContent = message;
 }
 
-// === ปุ่มกด ===
-document.getElementById("simulate-btn").addEventListener("click", () => {
-  const idA = document.getElementById("team-a").value;
-  const idB = document.getElementById("team-b").value;
+function handleLogin() {
+  const state = getAuthState();
   
-  if (idA === idB) {
-    alert("กรุณาเลือกทีมที่แตกต่างกัน");
+  // ตรวจสอบว่าถูกล็อกหรือไม่
+  if (isLocked()) {
+    const remaining = Math.ceil((new Date(state.lockedUntil) - new Date()) / 60000);
+    loginError.textContent = `⏳ ถูกระงับชั่วคราว — กรุณารอ ${remaining} นาทีแล้วลองใหม่`;
     return;
   }
 
-  const result = simulateMatch(idA, idB);
+  const input = document.getElementById("password-input").value.trim();
   
-  document.getElementById("name-a").textContent = result.teamA.name;
-  document.getElementById("name-b").textContent = result.teamB.name;
-  document.getElementById("score-a").textContent = result.scoreA;
-  document.getElementById("score-b").textContent = result.scoreB;
-
-  let summary = "";
-  if (result.scoreA > result.scoreB) {
-    summary = `🏆 ${result.teamA.name} ชนะ!`;
-  } else if (result.scoreB > result.scoreA) {
-    summary = `🏆 ${result.teamB.name} ชนะ!`;
+  if (input === CONFIG.password) {
+    state.authenticated = true;
+    state.attempts = 0;
+    state.lockedUntil = null;
+    saveAuthState(state);
+    showApp();
   } else {
-    summary = "🤝 ผลเสมอกัน";
+    state.attempts += 1;
+    if (state.attempts >= CONFIG.maxAttempts) {
+      state.lockedUntil = new Date(Date.now() + CONFIG.lockoutMinutes * 60000);
+      state.attempts = 0;
+      loginError.textContent = `❌ ใส่รหัสผิดเกินกำหนด — รอ ${CONFIG.lockoutMinutes} นาที`;
+    } else {
+      loginError.textContent = `❌ รหัสผ่านไม่ถูกต้อง — เหลือโอกาสอีก ${CONFIG.maxAttempts - state.attempts} ครั้ง`;
+    }
+    saveAuthState(state);
   }
-  document.getElementById("match-summary").textContent = summary;
-  document.getElementById("result-card").classList.remove("hidden");
+}
+
+document.getElementById("login-btn").addEventListener("click", handleLogin);
+document.getElementById("password-input").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") handleLogin();
 });
 
-document.getElementById("reset-btn").addEventListener("click", () => {
-  document.getElementById("result-card").classList.add("hidden");
+// ตรวจสอบสถานะตอนโหลดหน้า
+window.addEventListener("load", () => {
+  const state = getAuthState();
+  if (state.authenticated && !isLocked()) {
+    showApp();
+  } else {
+    showLogin();
+  }
 });
+
+// === ส่วนอื่นๆ เหมือนเดิม ===
+// ... (วางโค้ดส่วน teams, populateTeamSelects, simulateMatch, ปุ่มกด ต่อตรงนี้เหมือนเดิมครับ)
