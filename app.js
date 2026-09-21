@@ -3,20 +3,21 @@ const CONFIG = {
   password: "thai2026",
   maxAttempts: 5,
   lockoutMinutes: 10,
-  matchDuration: 90,
-  tickPerMinute: 6
+  matchDuration: 25,      // ⏰ เปลี่ยนเป็น 25 นาที
+  tickPerMinute: 6,
+  maxSubstitutions: 3     // จำนวนครั้งเปลี่ยนตัวต่อทีม
 };
 
 const STORAGE_KEY = "football_sim_auth";
 
-// === ข้อมูลนักเตะและทีม ===
+// === ข้อมูลนักเตะและทีม — มีตัวหลัก + ตัวสำรอง ===
 const teams = [
   {
     id: "thailand",
     name: "ทีมชาติไทย",
     color: "#2563eb",
     gkColor: "#fef08a",
-    players: [
+    starting: [
       { pos: "GK", name: "กัมพล ปฐมภูมินทร์", speed: 1.2, pass: 75, shoot: 60, defense: 90 },
       { pos: "RB", name: "นฤบดินทร์ วีรวัฒโนดม", speed: 2.8, pass: 78, shoot: 65, defense: 82 },
       { pos: "CB", name: "ธีราทร บุญมาทัน", speed: 2.5, pass: 82, shoot: 70, defense: 85 },
@@ -28,6 +29,15 @@ const teams = [
       { pos: "RW", name: "เจนริชาร์ด สุเรศ", speed: 3.8, pass: 78, shoot: 75, defense: 50 },
       { pos: "ST", name: "ศุภชัย ใจเด็ด", speed: 3.0, pass: 72, shoot: 88, defense: 45 },
       { pos: "LW", name: "อิทธิพล ทองสงคราม", speed: 3.3, pass: 80, shoot: 76, defense: 52 }
+    ],
+    substitutes: [
+      { pos: "GK", name: "กวิน ธรรมสัจจานนท์", speed: 1.1, pass: 73, shoot: 58, defense: 88 },
+      { pos: "DEF", name: "พรรษา เหมือนเจิม", speed: 2.4, pass: 75, shoot: 63, defense: 84 },
+      { pos: "DEF", name: "นิติพงษ์ เสมอวงษ์", speed: 2.6, pass: 74, shoot: 61, defense: 83 },
+      { pos: "MID", name: "สุมัญญา ปุริสาย", speed: 2.9, pass: 86, shoot: 74, defense: 68 },
+      { pos: "MID", name: "ชาญณรงค์ พรมศรีแก้ว", speed: 3.4, pass: 84, shoot: 77, defense: 58 },
+      { pos: "FWD", name: "พิธิวัตต์ สุขจิตร์", speed: 3.2, pass: 76, shoot: 82, defense: 48 },
+      { pos: "FWD", name: "วรุฒ กำเนิดพลอย", speed: 3.1, pass: 74, shoot: 80, defense: 46 }
     ]
   },
   {
@@ -35,7 +45,7 @@ const teams = [
     name: "ญี่ปุ่น",
     color: "#ffffff",
     gkColor: "#f97316",
-    players: [
+    starting: [
       { pos: "GK", name: "ซูซากุ นิชิโกะ", speed: 1.3, pass: 80, shoot: 62, defense: 92 },
       { pos: "RB", name: "ฮิโรกิ ซากาอิ", speed: 3.0, pass: 85, shoot: 70, defense: 84 },
       { pos: "CB", name: "มายูกิ โยชิดะ", speed: 2.5, pass: 78, shoot: 68, defense: 90 },
@@ -47,6 +57,15 @@ const teams = [
       { pos: "RW", name: "เรย์ ฮัตเตะ", speed: 3.8, pass: 85, shoot: 78, defense: 55 },
       { pos: "ST", name: "ทาคาฟูซะ คูโบะ", speed: 3.6, pass: 82, shoot: 85, defense: 50 },
       { pos: "LW", name: "ยูโตะ เซกิเน่", speed: 3.7, pass: 86, shoot: 80, defense: 58 }
+    ],
+    substitutes: [
+      { pos: "GK", name: "คาซึกิ โยชิโมโตะ", speed: 1.2, pass: 78, shoot: 60, defense: 90 },
+      { pos: "DEF", name: "ชูอิจิ คาวาตะ", speed: 2.8, pass: 80, shoot: 66, defense: 85 },
+      { pos: "DEF", name: "ทาเคชิ คูโบะ", speed: 2.6, pass: 77, shoot: 64, defense: 86 },
+      { pos: "MID", name: "ฮิโรยูกิ อิเคดะ", speed: 3.1, pass: 89, shoot: 76, defense: 70 },
+      { pos: "MID", name: "คินจิโร่ โทคุงะ", speed: 3.3, pass: 87, shoot: 79, defense: 62 },
+      { pos: "FWD", name: "อากิฮิโร่ ยามาซากิ", speed: 3.5, pass: 81, shoot: 86, defense: 52 },
+      { pos: "FWD", name: "เคนตะ นากามูระ", speed: 3.4, pass: 79, shoot: 83, defense: 54 }
     ]
   },
   {
@@ -54,7 +73,7 @@ const teams = [
     name: "บราซิล",
     color: "#fef08a",
     gkColor: "#2563eb",
-    players: [
+    starting: [
       { pos: "GK", name: "อลิสซง เบกเกอร์", speed: 1.4, pass: 82, shoot: 65, defense: 94 },
       { pos: "RB", name: "ดานีลู ซิลวา", speed: 3.3, pass: 88, shoot: 75, defense: 86 },
       { pos: "CB", name: "มาร์ควินยอส", speed: 2.8, pass: 80, shoot: 70, defense: 92 },
@@ -66,6 +85,15 @@ const teams = [
       { pos: "RW", name: "ราฟินญ่า", speed: 4.0, pass: 88, shoot: 85, defense: 60 },
       { pos: "ST", name: "ริชาร์ลิซอน", speed: 3.7, pass: 82, shoot: 92, defense: 58 },
       { pos: "LW", name: "เปโดร โชต้า", speed: 3.6, pass: 86, shoot: 88, defense: 55 }
+    ],
+    substitutes: [
+      { pos: "GK", name: "เอเดอร์สัน มอร์ไรส์", speed: 1.3, pass: 80, shoot: 63, defense: 92 },
+      { pos: "DEF", name: "ทิอาโก ซิลวา", speed: 2.5, pass: 78, shoot: 72, defense: 94 },
+      { pos: "DEF", name: "อเล็กซานเดอร์ ซานโดร", speed: 3.1, pass: 84, shoot: 74, defense: 82 },
+      { pos: "MID", name: "ฟาบินโญ", speed: 2.7, pass: 87, shoot: 76, defense: 88 },
+      { pos: "MID", name: "บรูโน กิมาไรส์", speed: 3.3, pass: 91, shoot: 84, defense: 74 },
+      { pos: "FWD", name: "โรดรีโก้ ซิลวา", speed: 4.1, pass: 89, shoot: 87, defense: 53 },
+      { pos: "FWD", name: "กาเบรียล เจซุส", speed: 3.8, pass: 84, shoot: 90, defense: 56 }
     ]
   }
 ];
@@ -82,8 +110,39 @@ let match = {
   ball: { x: 400, y: 225, vx: 0, vy: 0 },
   playersA: [],
   playersB: [],
-  goalScored: false
+  goalScored: false,
+  subsA: 0,
+  subsB: 0
 };
+
+// === ตำแหน่งพื้นฐาน ===
+const basePositionsA = [
+  { x: 50, y: 225, role: "GK", minX: 10, maxX: 100, minY: 150, maxY: 300 },
+  { x: 140, y: 80, role: "DEF", minX: 100, maxX: 250, minY: 30, maxY: 180 },
+  { x: 140, y: 170, role: "DEF", minX: 100, maxX: 250, minY: 120, maxY: 230 },
+  { x: 140, y: 280, role: "DEF", minX: 100, maxX: 250, minY: 230, maxY: 340 },
+  { x: 140, y: 370, role: "DEF", minX: 100, maxX: 250, minY: 320, maxY: 420 },
+  { x: 260, y: 130, role: "MID", minX: 200, maxX: 380, minY: 80, maxY: 220 },
+  { x: 260, y: 225, role: "MID", minX: 200, maxX: 380, minY: 160, maxY: 290 },
+  { x: 260, y: 320, role: "MID", minX: 200, maxX: 380, minY: 230, maxY: 380 },
+  { x: 380, y: 100, role: "FWD", minX: 320, maxX: 480, minY: 50, maxY: 200 },
+  { x: 380, y: 225, role: "FWD", minX: 320, maxX: 520, minY: 140, maxY: 310 },
+  { x: 380, y: 350, role: "FWD", minX: 320, maxX: 480, minY: 250, maxY: 400 }
+];
+
+const basePositionsB = [
+  { x: 750, y: 225, role: "GK", minX: 700, maxX: 790, minY: 150, maxY: 300 },
+  { x: 660, y: 80, role: "DEF", minX: 550, maxX: 700, minY: 30, maxY: 180 },
+  { x: 660, y: 170, role: "DEF", minX: 550, maxX: 700, minY: 120, maxY: 230 },
+  { x: 660, y: 280, role: "DEF", minX: 550, maxX: 700, minY: 230, maxY: 340 },
+  { x: 660, y: 370, role: "DEF", minX: 550, maxX: 700, minY: 320, maxY: 420 },
+  { x: 540, y: 130, role: "MID", minX: 420, maxX: 600, minY: 80, maxY: 220 },
+  { x: 540, y: 225, role: "MID", minX: 420, maxX: 600, minY: 160, maxY: 290 },
+  { x: 540, y: 320, role: "MID", minX: 420, maxX: 600, minY: 230, maxY: 380 },
+  { x: 420, y: 100, role: "FWD", minX: 320, maxX: 480, minY: 50, maxY: 200 },
+  { x: 420, y: 225, role: "FWD", minX: 280, maxX: 480, minY: 140, maxY: 310 },
+  { x: 420, y: 350, role: "FWD", minX: 320, maxX: 480, minY: 250, maxY: 400 }
+];
 
 // === DOM ===
 const loginSection = document.getElementById("login-section");
@@ -174,41 +233,12 @@ function populateTeamSelects() {
   });
 }
 
-// === ตำแหน่งพื้นฐานของนักเตะ ===
-const basePositionsA = [
-  { x: 50, y: 225, role: "GK", minX: 10, maxX: 100, minY: 150, maxY: 300 },
-  { x: 140, y: 80, role: "DEF", minX: 100, maxX: 250, minY: 30, maxY: 180 },
-  { x: 140, y: 170, role: "DEF", minX: 100, maxX: 250, minY: 120, maxY: 230 },
-  { x: 140, y: 280, role: "DEF", minX: 100, maxX: 250, minY: 230, maxY: 340 },
-  { x: 140, y: 370, role: "DEF", minX: 100, maxX: 250, minY: 320, maxY: 420 },
-  { x: 260, y: 130, role: "MID", minX: 200, maxX: 380, minY: 80, maxY: 220 },
-  { x: 260, y: 225, role: "MID", minX: 200, maxX: 380, minY: 160, maxY: 290 },
-  { x: 260, y: 320, role: "MID", minX: 200, maxX: 380, minY: 230, maxY: 380 },
-  { x: 380, y: 100, role: "FWD", minX: 320, maxX: 480, minY: 50, maxY: 200 },
-  { x: 380, y: 225, role: "FWD", minX: 320, maxX: 520, minY: 140, maxY: 310 },
-  { x: 380, y: 350, role: "FWD", minX: 320, maxX: 480, minY: 250, maxY: 400 }
-];
-
-const basePositionsB = [
-  { x: 750, y: 225, role: "GK", minX: 700, maxX: 790, minY: 150, maxY: 300 },
-  { x: 660, y: 80, role: "DEF", minX: 550, maxX: 700, minY: 30, maxY: 180 },
-  { x: 660, y: 170, role: "DEF", minX: 550, maxX: 700, minY: 120, maxY: 230 },
-  { x: 660, y: 280, role: "DEF", minX: 550, maxX: 700, minY: 230, maxY: 340 },
-  { x: 660, y: 370, role: "DEF", minX: 550, maxX: 700, minY: 320, maxY: 420 },
-  { x: 540, y: 130, role: "MID", minX: 420, maxX: 600, minY: 80, maxY: 220 },
-  { x: 540, y: 225, role: "MID", minX: 420, maxX: 600, minY: 160, maxY: 290 },
-  { x: 540, y: 320, role: "MID", minX: 420, maxX: 600, minY: 230, maxY: 380 },
-  { x: 420, y: 100, role: "FWD", minX: 320, maxX: 480, minY: 50, maxY: 200 },
-  { x: 420, y: 225, role: "FWD", minX: 280, maxX: 480, minY: 140, maxY: 310 },
-  { x: 420, y: 350, role: "FWD", minX: 320, maxX: 480, minY: 250, maxY: 400 }
-];
-
-// === สร้างนักเตะ ===
+// === สร้างนักเตะลงสนาม ===
 function createPlayers() {
   const teamAData = teams.find(t => t.id === match.teamA);
   const teamBData = teams.find(t => t.id === match.teamB);
 
-  match.playersA = teamAData.players.map((p, i) => ({
+  match.playersA = teamAData.starting.map((p, i) => ({
     ...p,
     x: basePositionsA[i].x,
     y: basePositionsA[i].y,
@@ -220,10 +250,11 @@ function createPlayers() {
     minY: basePositionsA[i].minY,
     maxY: basePositionsA[i].maxY,
     team: "A",
-    isGK: basePositionsA[i].role === "GK"
+    isGK: basePositionsA[i].role === "GK",
+    originalIndex: i
   }));
 
-  match.playersB = teamBData.players.map((p, i) => ({
+  match.playersB = teamBData.starting.map((p, i) => ({
     ...p,
     x: basePositionsB[i].x,
     y: basePositionsB[i].y,
@@ -235,8 +266,95 @@ function createPlayers() {
     minY: basePositionsB[i].minY,
     maxY: basePositionsB[i].maxY,
     team: "B",
-    isGK: basePositionsB[i].role === "GK"
+    isGK: basePositionsB[i].role === "GK",
+    originalIndex: i
   }));
+}
+
+// === 🔄 ระบบเปลี่ยนตัว ===
+function doSubstitution() {
+  if (!match.running) return;
+
+  const teamAData = teams.find(t => t.id === match.teamA);
+  const teamBData = teams.find(t => t.id === match.teamB);
+
+  // เปลี่ยนทีม A
+  if (match.subsA < CONFIG.maxSubstitutions && teamAData.substitutes.length > 0 && Math.random() < 0.12) {
+    const outIdx = Math.floor(Math.random() * match.playersA.length);
+    const outPlayer = match.playersA[outIdx];
+    const possibleIn = teamAData.substitutes.filter(s => s.pos === outPlayer.role || 
+                      (s.pos === "FWD" && outPlayer.role === "FWD") ||
+                      (s.pos === "MID" && outPlayer.role === "MID") ||
+                      (s.pos === "DEF" && outPlayer.role === "DEF") ||
+                      (s.pos === "GK" && outPlayer.role === "GK"));
+    
+    if (possibleIn.length > 0) {
+      const inIdx = Math.floor(Math.random() * possibleIn.length);
+      const inPlayer = possibleIn[inIdx];
+      
+      // เปลี่ยนตัว
+      match.playersA[outIdx] = {
+        ...inPlayer,
+        x: outPlayer.x,
+        y: outPlayer.y,
+        baseX: outPlayer.baseX,
+        baseY: outPlayer.baseY,
+        role: outPlayer.role,
+        minX: outPlayer.minX,
+        maxX: outPlayer.maxX,
+        minY: outPlayer.minY,
+        maxY: outPlayer.maxY,
+        team: "A",
+        isGK: outPlayer.isGK,
+        originalIndex: outPlayer.originalIndex
+      };
+
+      // ลบออกจากรายชื่อตัวสำรอง
+      const subIndex = teamAData.substitutes.indexOf(inPlayer);
+      if (subIndex > -1) teamAData.substitutes.splice(subIndex, 1);
+      
+      match.subsA++;
+      eventText.innerHTML = `🔄 เปลี่ยนตัว: ${outPlayer.name} ↔️ ${inPlayer.name}`;
+    }
+  }
+
+  // เปลี่ยนทีม B
+  if (match.subsB < CONFIG.maxSubstitutions && teamBData.substitutes.length > 0 && Math.random() < 0.12) {
+    const outIdx = Math.floor(Math.random() * match.playersB.length);
+    const outPlayer = match.playersB[outIdx];
+    const possibleIn = teamBData.substitutes.filter(s => s.pos === outPlayer.role || 
+                      (s.pos === "FWD" && outPlayer.role === "FWD") ||
+                      (s.pos === "MID" && outPlayer.role === "MID") ||
+                      (s.pos === "DEF" && outPlayer.role === "DEF") ||
+                      (s.pos === "GK" && outPlayer.role === "GK"));
+    
+    if (possibleIn.length > 0) {
+      const inIdx = Math.floor(Math.random() * possibleIn.length);
+      const inPlayer = possibleIn[inIdx];
+      
+      match.playersB[outIdx] = {
+        ...inPlayer,
+        x: outPlayer.x,
+        y: outPlayer.y,
+        baseX: outPlayer.baseX,
+        baseY: outPlayer.baseY,
+        role: outPlayer.role,
+        minX: outPlayer.minX,
+        maxX: outPlayer.maxX,
+        minY: outPlayer.minY,
+        maxY: outPlayer.maxY,
+        team: "B",
+        isGK: outPlayer.isGK,
+        originalIndex: outPlayer.originalIndex
+      };
+
+      const subIndex = teamBData.substitutes.indexOf(inPlayer);
+      if (subIndex > -1) teamBData.substitutes.splice(subIndex, 1);
+      
+      match.subsB++;
+      eventText.innerHTML = `🔄 เปลี่ยนตัว: ${outPlayer.name} ↔️ ${inPlayer.name}`;
+    }
+  }
 }
 
 // === วาดสนาม ===
@@ -315,7 +433,6 @@ function updatePlayers() {
     let chaseFactor = 0;
     let returnSpeed = player.speed * 0.3;
 
-    // พฤติกรรมตามตำแหน่ง
     if (player.role === "GK") {
       chaseFactor = dist < 80 ? 0.5 : 0;
     } else if (player.role === "DEF") {
@@ -330,13 +447,11 @@ function updatePlayers() {
       chaseFactor = dist < 250 ? 1.0 : 0.4;
     }
 
-    // เข้าหาลูกบอล
     if (chaseFactor > 0 && dist > 5) {
       const speed = player.speed * chaseFactor;
       player.x += (dx / dist) * speed;
       player.y += (dy / dist) * speed;
     } else {
-      // กลับไปยังตำแหน่งพื้นฐาน
       const bdx = player.baseX - player.x;
       const bdy = player.baseY - player.y;
       const bdist = Math.sqrt(bdx * bdx + bdy * bdy);
@@ -346,13 +461,12 @@ function updatePlayers() {
       }
     }
 
-    // ขอบเขตพื้นที่รับผิดชอบ
     player.x = Math.max(player.minX, Math.min(player.maxX, player.x));
     player.y = Math.max(player.minY, Math.min(player.maxY, player.y));
   });
 }
 
-// === เคลื่อนไหวลูกบอลตามความสามารถนักเตะ ===
+// === เคลื่อนไหวลูกบอลตามความสามารถ ===
 function updateBall() {
   match.ball.x += match.ball.vx;
   match.ball.y += match.ball.vy;
@@ -438,7 +552,18 @@ function gameLoop() {
   if (match.tick % CONFIG.tickPerMinute === 0) {
     match.minute++;
     matchMinute.textContent = match.minute;
-    updateEvent();
+    
+    // เปลี่ยนตัวสุ่ม
+    if (match.minute > 8 && match.minute < 23) {
+      doSubstitution();
+    }
+    
+    if (eventText.textContent.includes("GOAL") || eventText.textContent.includes("เปลี่ยนตัว")) {
+      // ค้างข้อความประตู/เปลี่ยนตัวไว้สักพัก
+    } else {
+      updateEvent();
+    }
+
     if (match.minute >= CONFIG.matchDuration) {
       match.running = false;
       eventText.innerHTML = `🏁 การแข่งขันจบลง! ${nameA.textContent} ${match.scoreA} - ${match.scoreB} ${nameB.textContent}`;
@@ -467,6 +592,13 @@ function startMatch() {
     return;
   }
 
+  // รีเซ็ตรายชื่อตัวสำรอง
+  teams.forEach(team => {
+    if (team.id === match.teamA || team.id === match.teamB) {
+      // ไม่ต้องทำอะไร เพราะข้อมูลคงที่ในโค้ด
+    }
+  });
+
   const teamAData = teams.find(t => t.id === match.teamA);
   const teamBData = teams.find(t => t.id === match.teamB);
 
@@ -483,6 +615,8 @@ function startMatch() {
   match.running = true;
   match.ball = { x: 400, y: 225, vx: 0, vy: 0 };
   match.goalScored = false;
+  match.subsA = 0;
+  match.subsB = 0;
 
   createPlayers();
   eventText.textContent = "⚽ เริ่มการแข่งขัน!";
