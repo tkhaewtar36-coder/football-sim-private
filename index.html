@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Football Match Simulator</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>⚽ Football Match Simulator</h1>
+      <p class="subtitle">ระบบจำลองการแข่งขันส่วนตัว</p>
+    </header>
+
+    <!-- ส่วนล็อกอิน -->
+    <div id="login-section" class="card">
+      <h2>🔒 เข้าสู่ระบบ</h2>
+      <input type="password" id="password-input" placeholder="ใส่รหัสผ่าน...">
+      <button id="login-btn">เข้าใช้งาน</button>
+      <p id="login-error" class="error"></p>
+    </div>
+
+    <!-- ส่วนหลัก (ซ่อนก่อนล็อกอิน) -->
+    <div id="main-app" style="display: none;">
+      <!-- เลือกทีม -->
+      <div class="card">
+        <h2>เลือกคู่แข่งขัน</h2>
+        <div class="teams-row">
+          <div class="team-col">
+            <label>ทีมที่ 1</label>
+            <select id="team-a"></select>
+          </div>
+          <div class="vs">VS</div>
+          <div class="team-col">
+            <label>ทีมที่ 2</label>
+            <select id="team-b"></select>
+          </div>
+        </div>
+        <button id="simulate-btn" class="play-btn">▶ จำลองการแข่งขัน</button>
+      </div>
+
+      <!-- ผลการแข่งขัน -->
+      <div id="result-card" class="card hidden">
+        <h2>📊 ผลการแข่งขัน</h2>
+        <div class="scoreboard">
+          <div class="team-display">
+            <span id="name-a">-</span>
+            <span id="score-a" class="score">0</span>
+          </div>
+          <div class="separator">:</div>
+          <div class="team-display">
+            <span id="name-b">-</span>
+            <span id="score-b" class="score">0</span>
+          </div>
+        </div>
+        <p id="match-summary" class="summary"></p>
+        <button id="reset-btn" class="reset-btn">แข่งใหม่</button>
+      </div>
+    </div>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
