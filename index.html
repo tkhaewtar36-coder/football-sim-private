@@ -10,7 +10,7 @@
   <div class="container">
     <header>
       <h1>⚽ Football Match Simulator</h1>
-      <p class="subtitle">ระบบจำลองการแข่งขันส่วนตัว</p>
+      <p class="subtitle">เวลาจริง 25 นาที = เวลาในเกม 90 นาที</p>
     </header>
 
     <!-- ส่วนล็อกอิน -->
@@ -24,7 +24,7 @@
     <!-- ส่วนหลัก -->
     <div id="main-app" style="display: none;">
       <div class="card">
-        <h2>เลือกคู่แข่งขัน</h2>
+        <h2>เลือกคู่แข่งขัน & การตัดสิน</h2>
         <div class="teams-row">
           <div class="team-col">
             <label>ทีมที่ 1</label>
@@ -36,6 +36,25 @@
             <select id="team-b"></select>
           </div>
         </div>
+
+        <div class="rules-section">
+          <label>รูปแบบการแข่งขัน:</label>
+          <div class="radio-group">
+            <label class="radio-label">
+              <input type="radio" name="match-mode" value="regular" checked>
+              <span>แค่ 90 นาที</span>
+            </label>
+            <label class="radio-label">
+              <input type="radio" name="match-mode" value="extra">
+              <span>รวมต่อเวลา</span>
+            </label>
+            <label class="radio-label">
+              <input type="radio" name="match-mode" value="penalty">
+              <span>รวมต่อเวลา + จุดโทษ</span>
+            </label>
+          </div>
+        </div>
+
         <button id="simulate-btn" class="play-btn">▶ เริ่มการแข่งขัน</button>
       </div>
 
@@ -48,7 +67,10 @@
           <span id="score-b">0</span>
           <span id="name-b">-</span>
         </div>
-        <div class="timer">นาทีที่ <span id="match-minute">0</span> / 25</div>
+        <div class="timer">
+          <span id="period-label">ครึ่งแรก</span>
+          นาทีที่ <span id="match-minute">0</span> / <span id="max-minute">45</span>
+        </div>
 
         <canvas id="pitch" width="800" height="450"></canvas>
 
