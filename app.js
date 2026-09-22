@@ -2,6 +2,7 @@ const CONFIG = {
   password: "thai2026",
   maxAttempts: 5,
   lockoutMinutes: 10,
+  realSecondsPerGameMinute: (25 * 60) / 90,
   tickPerGameMinute: 6,
   half1: 45,
   half2: 45,
@@ -336,6 +337,7 @@ function drawPlayers() {
   const teamAData = teams.find(t => t.id === match.teamA);
   const teamBData = teams.find(t => t.id === match.teamB);
   function drawPlayer(player, teamColor, gkColor) {
+    if (player.x < 0) return;
     ctx.beginPath();
     ctx.arc(player.x, player.y, 10, 0, Math.PI * 2);
     ctx.fillStyle = player.isGK ? gkColor : teamColor;
@@ -351,6 +353,7 @@ function drawPlayers() {
 }
 
 function drawBall() {
+  if (match.ball.x < 0 || match.ball.x > 800) return;
   ctx.beginPath(); ctx.arc(match.ball.x, match.ball.y, 7, 0, Math.PI * 2);
   ctx.fillStyle = "#fff"; ctx.fill();
   ctx.strokeStyle = "#000"; ctx.lineWidth = 1; ctx.stroke();
@@ -423,7 +426,7 @@ function checkGoal() {
     if (!match.goalScored) {
       match.scoreB += 1; match.goalScored = true;
       const teamB = teams.find(t => t.id === match.teamB);
-      eventText.innerHTML = `🎉 <strong>GOAL!</strong> ${teamB.name} นาทีที่ ${match.gameMinute}`;
+      eventText.innerHTML = `🎉 <strong>GOAL!</strong> ${teamB.name} ทำประตูได้ นาทีที่ ${match.gameMinute}`;
       scoreB.textContent = match.scoreB;
     }
     return true;
@@ -432,7 +435,7 @@ function checkGoal() {
     if (!match.goalScored) {
       match.scoreA += 1; match.goalScored = true;
       const teamA = teams.find(t => t.id === match.teamA);
-      eventText.innerHTML = `🎉 <strong>GOAL!</strong> ${teamA.name} นาทีที่ ${match.gameMinute}`;
+      eventText.innerHTML = `🎉 <strong>GOAL!</strong> ${teamA.name} ทำประตูได้ นาทีที่ ${match.gameMinute}`;
       scoreA.textContent = match.scoreA;
     }
     return true;
@@ -517,4 +520,148 @@ function startPenalties() {
   match.paused = true;
   match.kicksA = 0; match.kicksB = 0; match.kickAttempt = 0;
   periodLabel.textContent = "จุดโทษ";
-  eventText.innerHTML = "🎯 เสม
+  eventText.innerHTML = "🎯 เสมอกันหลังต่อเวลา — ตัดสินด้วยการยิงจุดโทษ!";
+  
+  match.playersA.forEach((p, i) => {
+    if (!p.isGK) { p.x = -100; p.y = -100; }
+    else { p.x = 95; p.y = 225; }
+  });
+  match.playersB.forEach((p, i) => {
+    if (!p.isGK) { p.x = -100; p.y = -100; }
+    else { p.x = 705; p.y = 225; }
+  });
+
+  setTimeout(runPenaltyKick, 2000);
+}
+
+function runPenaltyKick() {
+  if (!match.penaltyActive) return;
+
+  const isTeamA = match.kickAttempt % 2 === 0;
+  const kickerTeam = isTeamA ? teams.find(t => t.id === match.teamA) : teams.find(t => t.id === match.teamB);
+  const gk = isTeamA ? match.playersB.find(p => p.isGK) : match.playersA.find(p => p.isGK);
+  
+  const kickerSkill = 75 + Math.random() * 20;
+  const gkSkill = gk.defense + Math.random() * 10;
+  const scored = kickerSkill > gkSkill;
+
+  if (isTeamA) match.kicksA++;
+  else match.kicksB++;
+
+  if (scored) {
+    if (isTeamA) match.scoreA++;
+    else match.scoreB++;
+    scoreA.textContent = match.scoreA;
+    scoreB.textContent = match.scoreB;
+    eventText.innerHTML = `⚽ ${kickerTeam.name} ยิงเข้า! (${isTeamA ? match.kicksA : match.kicksB}/${CONFIG.penaltyKicks})<br>คะแนน: ${match.scoreA} - ${match.scoreB}`;
+  } else {
+    eventText.innerHTML = `🧤 เซฟได้! ${kickerTeam.name} ยิงไม่เข้า (${isTeamA ? match.kicksA : match.kicksB}/${CONFIG.penaltyKicks})<br>คะแนน: ${match.scoreA} - ${match.scoreB}`;
+  }
+
+  match.kickAttempt++;
+
+  const kicksTaken = Math.floor(match.kickAttempt / 2);
+  if (kicksTaken >= CONFIG.penaltyKicks ||
+      Math.abs(match.scoreA - match.scoreB) > (CONFIG.penaltyKicks - kicksTaken)) {
+    setTimeout(() => {
+      match.penaltyActive = false;
+      endMatch();
+    }, 1500);
+    return;
+  }
+
+  setTimeout(runPenaltyKick, 2500);
+}
+
+let lastTime = 0;
+function gameLoop(timestamp) {
+  if (!lastTime) lastTime = timestamp;
+  const delta = timestamp - lastTime;
+
+  if (match.running && !match.paused && !match.penaltyActive) {
+    const tickInterval = (CONFIG.realSecondsPerGameMinute * 1000) / CONFIG.tickPerGameMinute;
+    if (delta >= tickInterval) {
+      lastTime = timestamp;
+      match.tick++;
+      
+      if (match.tick % CONFIG.tickPerGameMinute === 0) {
+        match.gameMinute++;
+        match.goalScored = false;
+        matchMinute.textContent = match.gameMinute;
+        updateEventText();
+        doSubstitution();
+      }
+
+      if (match.gameMinute >= match.periodEnd) {
+        switchPeriod();
+      }
+
+      updatePlayers();
+      updateBall();
+      if (checkGoal()) {
+        match.paused = true;
+        setTimeout(() => {
+          match.paused = false;
+          match.ball = { x: 400, y: 225, vx: 0, vy: 0 };
+        }, 2500);
+      }
+    }
+  }
+
+  drawPitch();
+  drawPlayers();
+  drawBall();
+
+  requestAnimationFrame(gameLoop);
+}
+
+function startMatch() {
+  const selectedMode = document.querySelector('input[name="match-mode"]:checked').value;
+  
+  match = {
+    teamA: teamASelect.value,
+    teamB: teamBSelect.value,
+    scoreA: 0, scoreB: 0,
+    gameMinute: 0, tick: 0,
+    running: true, paused: false,
+    mode: selectedMode, period: "first", periodEnd: 45,
+    ball: { x: 400, y: 225, vx: 0, vy: 0 },
+    playersA: [], playersB: [],
+    goalScored: false, subsA: 0, subsB: 0,
+    penaltyActive: false, kicksA: 0, kicksB: 0, kickAttempt: 0
+  };
+
+  nameA.textContent = teams.find(t => t.id === match.teamA).name;
+  nameB.textContent = teams.find(t => t.id === match.teamB).name;
+  scoreA.textContent = "0";
+  scoreB.textContent = "0";
+  matchMinute.textContent = "0";
+  maxMinuteEl.textContent = "45";
+  periodLabel.textContent = "ครึ่งแรก";
+  
+  createPlayers();
+  eventText.innerHTML = "⚽ เริ่มการแข่งขัน!";
+  lastTime = 0;
+}
+
+function resetMatch() {
+  match.running = false;
+  match.penaltyActive = false;
+  match.ball = { x: 400, y: 225, vx: 0, vy: 0 };
+  eventText.textContent = "กดเริ่มการแข่งขันเพื่อเริ่มจำลอง...";
+  nameA.textContent = "-";
+  nameB.textContent = "-";
+  scoreA.textContent = "0";
+  scoreB.textContent = "0";
+  matchMinute.textContent = "0";
+  maxMinuteEl.textContent = "45";
+  periodLabel.textContent = "ครึ่งแรก";
+  lastTime = 0;
+}
+
+loginBtn.addEventListener("click", handleLogin);
+passwordInput.addEventListener("keydown", e => e.key === "Enter" && handleLogin());
+simulateBtn.addEventListener("click", startMatch);
+resetBtn.addEventListener("click", resetMatch);
+
+requestAnimationFrame(gameLoop);
