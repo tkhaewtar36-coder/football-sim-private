@@ -1,11 +1,8 @@
-// === ตั้งค่าเวลา: 25 นาทีจริง = 90 นาทีในเกม ===
 const CONFIG = {
   password: "thai2026",
   maxAttempts: 5,
   lockoutMinutes: 10,
-  // เวลาจริง 25 นาที = 1500 วินาที = 90 นาทีในเกม
-  realSecondsPerGameMinute: (25 * 60) / 90,  // ~16.67 วินาทีจริง ต่อ 1 นาทีเกม
-  tickPerGameMinute: 6,                        // จำนวนรอบต่อนาทีในเกม
+  tickPerGameMinute: 6,
   half1: 45,
   half2: 45,
   extraHalf: 15,
@@ -15,7 +12,6 @@ const CONFIG = {
 
 const STORAGE_KEY = "football_sim_auth";
 
-// === ข้อมูลนักเตะและทีม — มีตัวหลัก + ตัวสำรอง ===
 const teams = [
   {
     id: "thailand",
@@ -103,33 +99,18 @@ const teams = [
   }
 ];
 
-// === สถานะการแข่งขัน ===
 let match = {
-  teamA: null,
-  teamB: null,
-  scoreA: 0,
-  scoreB: 0,
-  gameMinute: 0,       // นาทีในเกม
-  tick: 0,
-  running: false,
-  paused: false,
-  mode: "regular",     // regular | extra | penalty
-  period: "first",     // first | second | extra1 | extra2 | penalties
-  periodEnd: 45,
+  teamA: null, teamB: null,
+  scoreA: 0, scoreB: 0,
+  gameMinute: 0, tick: 0,
+  running: false, paused: false,
+  mode: "regular", period: "first", periodEnd: 45,
   ball: { x: 400, y: 225, vx: 0, vy: 0 },
-  playersA: [],
-  playersB: [],
-  goalScored: false,
-  subsA: 0,
-  subsB: 0,
-  // จุดโทษ
-  penaltyActive: false,
-  kicksA: 0,
-  kicksB: 0,
-  kickAttempt: 0
+  playersA: [], playersB: [],
+  goalScored: false, subsA: 0, subsB: 0,
+  penaltyActive: false, kicksA: 0, kicksB: 0, kickAttempt: 0
 };
 
-// === ตำแหน่งพื้นฐาน ===
 const basePositionsA = [
   { x: 50, y: 225, role: "GK", minX: 10, maxX: 100, minY: 150, maxY: 300 },
   { x: 140, y: 80, role: "DEF", minX: 100, maxX: 250, minY: 30, maxY: 180 },
@@ -158,18 +139,15 @@ const basePositionsB = [
   { x: 420, y: 350, role: "FWD", minX: 320, maxX: 480, minY: 250, maxY: 400 }
 ];
 
-// === DOM ===
 const loginSection = document.getElementById("login-section");
 const mainApp = document.getElementById("main-app");
 const loginError = document.getElementById("login-error");
 const passwordInput = document.getElementById("password-input");
 const loginBtn = document.getElementById("login-btn");
-
 const teamASelect = document.getElementById("team-a");
 const teamBSelect = document.getElementById("team-b");
 const simulateBtn = document.getElementById("simulate-btn");
 const resetBtn = document.getElementById("reset-btn");
-
 const nameA = document.getElementById("name-a");
 const nameB = document.getElementById("name-b");
 const scoreA = document.getElementById("score-a");
@@ -178,11 +156,9 @@ const matchMinute = document.getElementById("match-minute");
 const maxMinuteEl = document.getElementById("max-minute");
 const periodLabel = document.getElementById("period-label");
 const eventText = document.getElementById("event-text");
-
 const canvas = document.getElementById("pitch");
 const ctx = canvas.getContext("2d");
 
-// === Authentication ===
 function getAuthState() {
   const saved = localStorage.getItem(STORAGE_KEY);
   return saved ? JSON.parse(saved) : { authenticated: false, attempts: 0, lockedUntil: null };
@@ -236,7 +212,6 @@ function handleLogin() {
   }
 }
 
-// === Team Select ===
 function populateTeamSelects() {
   [teamASelect, teamBSelect].forEach(select => {
     select.innerHTML = "";
@@ -249,144 +224,106 @@ function populateTeamSelects() {
   });
 }
 
-// === สร้างนักเตะลงสนาม ===
 function createPlayers() {
   const teamAData = teams.find(t => t.id === match.teamA);
   const teamBData = teams.find(t => t.id === match.teamB);
-
   match.playersA = teamAData.starting.map((p, i) => ({
-    ...p,
-    x: basePositionsA[i].x,
-    y: basePositionsA[i].y,
-    baseX: basePositionsA[i].x,
-    baseY: basePositionsA[i].y,
+    ...p, x: basePositionsA[i].x, y: basePositionsA[i].y,
+    baseX: basePositionsA[i].x, baseY: basePositionsA[i].y,
     role: basePositionsA[i].role,
-    minX: basePositionsA[i].minX,
-    maxX: basePositionsA[i].maxX,
-    minY: basePositionsA[i].minY,
-    maxY: basePositionsA[i].maxY,
-    team: "A",
-    isGK: basePositionsA[i].role === "GK",
-    originalIndex: i
+    minX: basePositionsA[i].minX, maxX: basePositionsA[i].maxX,
+    minY: basePositionsA[i].minY, maxY: basePositionsA[i].maxY,
+    team: "A", isGK: basePositionsA[i].role === "GK", originalIndex: i
   }));
-
   match.playersB = teamBData.starting.map((p, i) => ({
-    ...p,
-    x: basePositionsB[i].x,
-    y: basePositionsB[i].y,
-    baseX: basePositionsB[i].x,
-    baseY: basePositionsB[i].y,
+    ...p, x: basePositionsB[i].x, y: basePositionsB[i].y,
+    baseX: basePositionsB[i].x, baseY: basePositionsB[i].y,
     role: basePositionsB[i].role,
-    minX: basePositionsB[i].minX,
-    maxX: basePositionsB[i].maxX,
-    minY: basePositionsB[i].minY,
-    maxY: basePositionsB[i].maxY,
-    team: "B",
-    isGK: basePositionsB[i].role === "GK",
-    originalIndex: i
+    minX: basePositionsB[i].minX, maxX: basePositionsB[i].maxX,
+    minY: basePositionsB[i].minY, maxY: basePositionsB[i].maxY,
+    team: "B", isGK: basePositionsB[i].role === "GK", originalIndex: i
   }));
 }
 
-// === 🔄 ระบบเปลี่ยนตัว ===
 function doSubstitution() {
   if (!match.running || match.paused || match.penaltyActive) return;
+  if (match.gameMinute < 15 || match.gameMinute > 85) return;
 
-  // เปลี่ยนทีม A
   if (match.subsA < CONFIG.maxSubstitutions && Math.random() < 0.08) {
     const teamAData = teams.find(t => t.id === match.teamA);
     if (teamAData.substitutes.length === 0) return;
-
     const outIdx = Math.floor(Math.random() * match.playersA.length);
     const outPlayer = match.playersA[outIdx];
-    const possibleIn = teamAData.substitutes.filter(s => 
-      (s.pos === outPlayer.role) ||
+    const possibleIn = teamAData.substitutes.filter(s =>
+      s.pos === outPlayer.role ||
       (s.pos === "FWD" && outPlayer.role === "FWD") ||
       (s.pos === "MID" && outPlayer.role === "MID") ||
       (s.pos === "DEF" && outPlayer.role === "DEF") ||
       (s.pos === "GK" && outPlayer.role === "GK")
     );
-    
     if (possibleIn.length > 0) {
       const inIdx = Math.floor(Math.random() * possibleIn.length);
       const inPlayer = possibleIn[inIdx];
-      
-      match.playersA[outIdx] = {
-        ...inPlayer,
+      match.playersA[outIdx] = { ...inPlayer,
         x: outPlayer.x, y: outPlayer.y,
         baseX: outPlayer.baseX, baseY: outPlayer.baseY,
         role: outPlayer.role,
         minX: outPlayer.minX, maxX: outPlayer.maxX,
         minY: outPlayer.minY, maxY: outPlayer.maxY,
-        team: "A", isGK: outPlayer.isGK,
-        originalIndex: outPlayer.originalIndex
+        team: "A", isGK: outPlayer.isGK, originalIndex: outPlayer.originalIndex
       };
-
       const subIndex = teamAData.substitutes.indexOf(inPlayer);
       if (subIndex > -1) teamAData.substitutes.splice(subIndex, 1);
-      
       match.subsA++;
       eventText.innerHTML = `🔄 เปลี่ยนตัว: ${outPlayer.name} ↔️ ${inPlayer.name}`;
     }
   }
 
-  // เปลี่ยนทีม B
   if (match.subsB < CONFIG.maxSubstitutions && Math.random() < 0.08) {
     const teamBData = teams.find(t => t.id === match.teamB);
     if (teamBData.substitutes.length === 0) return;
-
     const outIdx = Math.floor(Math.random() * match.playersB.length);
     const outPlayer = match.playersB[outIdx];
-    const possibleIn = teamBData.substitutes.filter(s => 
-      (s.pos === outPlayer.role) ||
+    const possibleIn = teamBData.substitutes.filter(s =>
+      s.pos === outPlayer.role ||
       (s.pos === "FWD" && outPlayer.role === "FWD") ||
       (s.pos === "MID" && outPlayer.role === "MID") ||
       (s.pos === "DEF" && outPlayer.role === "DEF") ||
       (s.pos === "GK" && outPlayer.role === "GK")
     );
-    
     if (possibleIn.length > 0) {
       const inIdx = Math.floor(Math.random() * possibleIn.length);
       const inPlayer = possibleIn[inIdx];
-      
-      match.playersB[outIdx] = {
-        ...inPlayer,
+      match.playersB[outIdx] = { ...inPlayer,
         x: outPlayer.x, y: outPlayer.y,
         baseX: outPlayer.baseX, baseY: outPlayer.baseY,
         role: outPlayer.role,
         minX: outPlayer.minX, maxX: outPlayer.maxX,
         minY: outPlayer.minY, maxY: outPlayer.maxY,
-        team: "B", isGK: outPlayer.isGK,
-        originalIndex: outPlayer.originalIndex
+        team: "B", isGK: outPlayer.isGK, originalIndex: outPlayer.originalIndex
       };
-
       const subIndex = teamBData.substitutes.indexOf(inPlayer);
       if (subIndex > -1) teamBData.substitutes.splice(subIndex, 1);
-      
       match.subsB++;
       eventText.innerHTML = `🔄 เปลี่ยนตัว: ${outPlayer.name} ↔️ ${inPlayer.name}`;
     }
   }
 }
 
-// === วาดสนาม ===
 function drawPitch() {
   ctx.fillStyle = "#16a34a";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-
   ctx.strokeStyle = "#ffffff";
   ctx.lineWidth = 2;
   ctx.strokeRect(10, 10, 780, 430);
   ctx.beginPath(); ctx.moveTo(400, 10); ctx.lineTo(400, 440); ctx.stroke();
   ctx.beginPath(); ctx.arc(400, 225, 70, 0, Math.PI * 2); ctx.stroke();
-  ctx.beginPath(); ctx.arc(130, 225, 3, 0, Math.PI * 2); ctx.fillStyle = "#fff"; ctx.fill();
-  ctx.beginPath(); ctx.arc(670, 225, 3, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(130, 225, 4, 0, Math.PI * 2); ctx.fillStyle = "#fff"; ctx.fill();
+  ctx.beginPath(); ctx.arc(670, 225, 4, 0, Math.PI * 2); ctx.fill();
   ctx.strokeRect(10, 130, 130, 190);
   ctx.strokeRect(660, 130, 130, 190);
   ctx.strokeRect(10, 180, 60, 90);
   ctx.strokeRect(730, 180, 60, 90);
-  // จุดโทษ
-  ctx.beginPath(); ctx.arc(95, 225, 4, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.arc(705, 225, 4, 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = "rgba(255,255,255,0.25)";
   ctx.fillRect(0, 190, 15, 70);
   ctx.fillRect(785, 190, 15, 70);
@@ -395,102 +332,69 @@ function drawPitch() {
   ctx.strokeRect(785, 190, 15, 70);
 }
 
-// === วาดนักเตะ + ชื่อ ===
 function drawPlayers() {
   const teamAData = teams.find(t => t.id === match.teamA);
   const teamBData = teams.find(t => t.id === match.teamB);
-
   function drawPlayer(player, teamColor, gkColor) {
     ctx.beginPath();
     ctx.arc(player.x, player.y, 10, 0, Math.PI * 2);
     ctx.fillStyle = player.isGK ? gkColor : teamColor;
     ctx.fill();
-    ctx.strokeStyle = "#000";
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.arc(player.x, player.y - 14, 5, 0, Math.PI * 2);
-    ctx.fillStyle = "#fcd34d";
-    ctx.fill();
-
-    ctx.fillStyle = "#fff";
-    ctx.font = "9px Arial";
-    ctx.textAlign = "center";
+    ctx.strokeStyle = "#000"; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.beginPath(); ctx.arc(player.x, player.y - 14, 5, 0, Math.PI * 2);
+    ctx.fillStyle = "#fcd34d"; ctx.fill();
+    ctx.fillStyle = "#fff"; ctx.font = "9px Arial"; ctx.textAlign = "center";
     ctx.fillText(player.name.split(" ")[0], player.x, player.y + 24);
   }
-
   match.playersA.forEach(p => drawPlayer(p, teamAData.color, teamAData.gkColor));
   match.playersB.forEach(p => drawPlayer(p, teamBData.color, teamBData.gkColor));
 }
 
-// === วาดลูกบอล ===
 function drawBall() {
-  ctx.beginPath();
-  ctx.arc(match.ball.x, match.ball.y, 7, 0, Math.PI * 2);
-  ctx.fillStyle = "#ffffff";
-  ctx.fill();
-  ctx.strokeStyle = "#000";
-  ctx.lineWidth = 1;
-  ctx.stroke();
+  ctx.beginPath(); ctx.arc(match.ball.x, match.ball.y, 7, 0, Math.PI * 2);
+  ctx.fillStyle = "#fff"; ctx.fill();
+  ctx.strokeStyle = "#000"; ctx.lineWidth = 1; ctx.stroke();
 }
 
-// === อัปเดตตำแหน่งตามตำแหน่งหน้าที่ ===
 function updatePlayers() {
   if (match.penaltyActive) return;
-
   const allPlayers = [...match.playersA, ...match.playersB];
-
   allPlayers.forEach(player => {
     const dx = match.ball.x - player.x;
     const dy = match.ball.y - player.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
-
-    let chaseFactor = 0;
-    let returnSpeed = player.speed * 0.3;
-
-    if (player.role === "GK") {
-      chaseFactor = dist < 80 ? 0.5 : 0;
-    } else if (player.role === "DEF") {
-      const ballInZone = (player.team === "A" && match.ball.x < 350) ||
-                         (player.team === "B" && match.ball.x > 450);
+    let chaseFactor = 0, returnSpeed = player.speed * 0.3;
+    if (player.role === "GK") chaseFactor = dist < 80 ? 0.5 : 0;
+    else if (player.role === "DEF") {
+      const ballInZone = (player.team === "A" && match.ball.x < 350) || (player.team === "B" && match.ball.x > 450);
       chaseFactor = ballInZone && dist < 150 ? 0.7 : 0;
     } else if (player.role === "MID") {
-      const ballNear = (player.team === "A" && match.ball.x < 450) ||
-                       (player.team === "B" && match.ball.x > 350);
+      const ballNear = (player.team === "A" && match.ball.x < 450) || (player.team === "B" && match.ball.x > 350);
       chaseFactor = ballNear && dist < 200 ? 0.85 : 0.3;
-    } else if (player.role === "FWD") {
-      chaseFactor = dist < 250 ? 1.0 : 0.4;
-    }
+    } else if (player.role === "FWD") chaseFactor = dist < 250 ? 1.0 : 0.4;
 
     if (chaseFactor > 0 && dist > 5) {
       const speed = player.speed * chaseFactor;
       player.x += (dx / dist) * speed;
       player.y += (dy / dist) * speed;
     } else {
-      const bdx = player.baseX - player.x;
-      const bdy = player.baseY - player.y;
+      const bdx = player.baseX - player.x, bdy = player.baseY - player.y;
       const bdist = Math.sqrt(bdx * bdx + bdy * bdy);
       if (bdist > 3) {
         player.x += (bdx / bdist) * returnSpeed;
         player.y += (bdy / bdist) * returnSpeed;
       }
     }
-
     player.x = Math.max(player.minX, Math.min(player.maxX, player.x));
     player.y = Math.max(player.minY, Math.min(player.maxY, player.y));
   });
 }
 
-// === เคลื่อนไหวลูกบอลตามความสามารถ ===
 function updateBall() {
   if (match.penaltyActive || match.paused) return;
-
   match.ball.x += match.ball.vx;
   match.ball.y += match.ball.vy;
-  match.ball.vx *= 0.98;
-  match.ball.vy *= 0.98;
-
+  match.ball.vx *= 0.98; match.ball.vy *= 0.98;
   if (match.ball.x < 15 || match.ball.x > 785) {
     match.ball.vx *= -0.6;
     match.ball.x = Math.max(15, Math.min(785, match.ball.x));
@@ -499,13 +403,11 @@ function updateBall() {
     match.ball.vy *= -0.6;
     match.ball.y = Math.max(15, Math.min(435, match.ball.y));
   }
-
   const allPlayers = [...match.playersA, ...match.playersB];
   allPlayers.forEach(player => {
     const dx = match.ball.x - player.x;
     const dy = match.ball.y - player.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
-
     if (dist < 17) {
       const basePower = player.isGK ? 3 : 4 + (player.shoot / 25);
       const power = basePower * (0.8 + Math.random() * 0.4);
@@ -515,26 +417,22 @@ function updateBall() {
   });
 }
 
-// === ตรวจสอบประตู ===
 function checkGoal() {
   if (match.penaltyActive || match.paused) return false;
-
   if (match.ball.x < 18 && match.ball.y > 190 && match.ball.y < 260) {
     if (!match.goalScored) {
-      match.scoreB += 1;
-      match.goalScored = true;
+      match.scoreB += 1; match.goalScored = true;
       const teamB = teams.find(t => t.id === match.teamB);
-      eventText.innerHTML = `🎉 <strong>GOAL!</strong> ${teamB.name} ทำประตูได้ นาทีที่ ${match.gameMinute}`;
+      eventText.innerHTML = `🎉 <strong>GOAL!</strong> ${teamB.name} นาทีที่ ${match.gameMinute}`;
       scoreB.textContent = match.scoreB;
     }
     return true;
   }
   if (match.ball.x > 782 && match.ball.y > 190 && match.ball.y < 260) {
     if (!match.goalScored) {
-      match.scoreA += 1;
-      match.goalScored = true;
+      match.scoreA += 1; match.goalScored = true;
       const teamA = teams.find(t => t.id === match.teamA);
-      eventText.innerHTML = `🎉 <strong>GOAL!</strong> ${teamA.name} ทำประตูได้ นาทีที่ ${match.gameMinute}`;
+      eventText.innerHTML = `🎉 <strong>GOAL!</strong> ${teamA.name} นาทีที่ ${match.gameMinute}`;
       scoreA.textContent = match.scoreA;
     }
     return true;
@@ -542,86 +440,81 @@ function checkGoal() {
   return false;
 }
 
-// === เปลี่ยนช่วงเวลา ===
+function updateEventText() {
+  if (eventText.textContent.includes("GOAL") ||
+      eventText.textContent.includes("เปลี่ยนตัว") ||
+      eventText.textContent.includes("จบลง") ||
+      eventText.textContent.includes("พัก") ||
+      eventText.textContent.includes("จุดโทษ")) return;
+  const rand = Math.random();
+  if (rand < 0.06) eventText.textContent = "ผู้รักษาประตูส่งบอลยาว...";
+  else if (rand < 0.12) eventText.textContent = "กองหลังเคลียร์บอลออกจากเขตโทษ";
+  else if (rand < 0.20) eventText.textContent = "กองกลางจ่ายบอลต่อเนื่อง...";
+  else if (rand < 0.28) eventText.textContent = "กองหน้าพาบอลเข้าเขตโทษ กำลังยิง!";
+  else if (rand < 0.35) eventText.textContent = "แย่งบอลกลับได้แดนกลาง";
+  else if (rand < 0.42) eventText.textContent = "เปิดบอลเข้าหน้าประตู...";
+  else if (rand < 0.50) eventText.textContent = "ผู้รักษาประตูเซฟบอลได้!";
+  else eventText.textContent = "การแข่งขันดำเนินไปอย่างสูสี...";
+}
+
+function endMatch() {
+  match.running = false;
+  const winner = match.scoreA > match.scoreB
+    ? teams.find(t => t.id === match.teamA).name
+    : match.scoreB > match.scoreA
+      ? teams.find(t => t.id === match.teamB).name
+      : "เสมอกัน";
+  eventText.innerHTML = `🏁 การแข่งขันจบลง!<br>${nameA.textContent} ${match.scoreA} - ${match.scoreB} ${nameB.textContent}<br>${winner !== "เสมอกัน" ? `ผู้ชนะ: ${winner}` : ""}`;
+}
+
 function switchPeriod() {
   match.goalScored = false;
   match.ball = { x: 400, y: 225, vx: 0, vy: 0 };
 
   if (match.period === "first") {
-    // จบครึ่งแรก
     match.period = "second";
     match.gameMinute = 45;
     match.periodEnd = 90;
     periodLabel.textContent = "ครึ่งหลัง";
     maxMinuteEl.textContent = "90";
     eventText.innerHTML = "⏸ พักครึ่ง — เริ่มครึ่งหลัง!";
-    
+    match.paused = true;
+    setTimeout(() => { match.paused = false; eventText.textContent = "เริ่มเล่นต่อ!"; }, 3000);
+
   } else if (match.period === "second") {
-    // จบ 90 นาที
     if (match.scoreA !== match.scoreB || match.mode === "regular") {
-      endMatch();
-      return;
+      endMatch(); return;
     }
-    // ต่อเวลา
     if (match.mode === "extra" || match.mode === "penalty") {
       match.period = "extra1";
       match.gameMinute = 90;
       match.periodEnd = 105;
       periodLabel.textContent = "ต่อเวลา 1";
       maxMinuteEl.textContent = "105";
-      eventText.innerHTML = "⏱ เวลาปกติเสมอกัน! เริ่มต่อเวลา 15 นาที";
-    } else {
-      endMatch();
-      return;
-    }
+      eventText.innerHTML = "⏱ เสมอกัน! เริ่มต่อเวลา 15 นาที";
+    } else { endMatch(); return; }
 
   } else if (match.period === "extra1") {
-    // จบต่อเวลาครึ่งแรก
     match.period = "extra2";
     match.gameMinute = 105;
     match.periodEnd = 120;
     periodLabel.textContent = "ต่อเวลา 2";
     maxMinuteEl.textContent = "120";
     eventText.innerHTML = "⏱ พักต่อเวลา — เริ่มครึ่งหลังต่อเวลา";
+    match.paused = true;
+    setTimeout(() => { match.paused = false; }, 2000);
 
   } else if (match.period === "extra2") {
-    // จบต่อเวลา
     if (match.scoreA !== match.scoreB || match.mode !== "penalty") {
-      endMatch();
-      return;
+      endMatch(); return;
     }
-    // ยิงจุดโทษ
-    startPenalties();
-    return;
+    startPenalties(); return;
   }
-
-  match.paused = false;
 }
 
-// === ⚽ ระบบยิงจุดโทษ ===
 function startPenalties() {
   match.penaltyActive = true;
   match.paused = true;
-  match.kicksA = 0;
-  match.kicksB = 0;
-  match.kickAttempt = 0;
+  match.kicksA = 0; match.kicksB = 0; match.kickAttempt = 0;
   periodLabel.textContent = "จุดโทษ";
-  eventText.innerHTML = "🎯 เสมอกันหลังต่อเวลา — ตัดสินด้วยการยิงจุดโทษ!";
-  
-  // ซ่อนนักเตะเหลือแค่ผู้รักษาประตู
-  match.playersA.forEach((p, i) => {
-    if (!p.isGK) { p.x = -100; p.y = -100; }
-    else { p.x = 95; p.y = 225; }
-  });
-  match.playersB.forEach((p, i) => {
-    if (!p.isGK) { p.x = -100; p.y = -100; }
-    else { p.x = 705; p.y = 225; }
-  });
-
-  setTimeout(runPenaltyKick, 2000);
-}
-
-function runPenaltyKick() {
-  if (!match.penaltyActive) return;
-
-  const teamAData = teams.find(t
+  eventText.innerHTML = "🎯 เสม
